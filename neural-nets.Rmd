@@ -1,7 +1,7 @@
 ---
 title: "Neural Networks"
-author: "Charles Lang"
-date: "1/28/2018"
+author: "Yunzhao Wu"
+date: "3/22/2021"
 output: html_document
 ---
 
@@ -29,9 +29,9 @@ library(neuralnet)
 
 Now upload your data
 ```{r}
-D1 <- 
+D1 <- read.csv("attention1.csv")
   
-D2 <- 
+D2 <- read.csv("attention2.csv")
 ```
 
 Now you can build a neural net that predicts attention based on webcam images. The command "neuralnet" sets up the model. It is composed of four basic arguments:
@@ -54,36 +54,112 @@ plot(nn)
 ```
 
 You have now trained a neural network! The plot shows you the layers of your newtork as black nodes and edges with the calculated weights on each edge. The blue nodes and edges are the bias/threshold terms - it is a little bit confusing that they are represented as nodes, they are not nodes in the sense that the black nodes are. The bias anchors the activation function, the weights change the shape of the activation function while the bias term changes the overall position of the activation function - if you have used linear regression the bias term is like the intercept of the regression equation, it shifts the trend line up and down the y axis, while the other parameters change the angle of the line. The plot also reports the final error rate and the number of iterations ("steps") that it took to reach these weights.
+```{r}
+# activation function: the activation function of a node defines the output of that node given an input or set of inputs.
+```
+
 
 What happens if you increase the number of hidden layers in the neural net? Build a second neural net with more or fewer layers in it and determine if this improves your predictions or not? How can you tell if your new neural network is doing a better job than your first?
+```{r}
+aa <- neuralnet(attention == 1 ~ eyes + face.forward + chin.up + squint + hunch + mouth1 + mouth2 + mouth3, D1, hidden = c(4,4), learningrate = 0.2)
+
+plot(aa)
+
+# Error: nn: 0.913, aa: 0.909
+# When increase the number of hidden layers in the neural net, the error rate dops, it improves my prediction, so the new neural network is doing a better job.
+```
+
 
 Now use your preferred neural net to predict the second data set. You will need to create a new data frame (D3) that only includes the input layers to use this command.
 
 ```{r}
-D3 <- 
+D3 <- D2[,-4]
 ```
 
 Now you can create predictions using your neural net
 ```{r}
 #The code below will use your model to predict the outcome using D3 data
 pred <- predict(nn, D3)
+pred2 <- predict(aa,D3)
 
-#The code below will tell you how accurate your model is att predicting the unseen data
+#The code below will tell you how accurate your model is attention predicting the unseen data
 table(D2$attention == 1, pred[, 1] > 0.5)
+table(D2$attention == 1, pred2[, 1] > 0.5)
 
-#Adjust both the hidden layer and lerarning rate and see if that has an impact on error, steps and prediction accuracy
 
+#Adjust both the hidden layer and learning rate and see if that has an impact on error, steps and prediction accuracy
 
+bb <- neuralnet(attention == 1 ~ eyes + face.forward + chin.up + squint + hunch + mouth1 + mouth2 + mouth3, D1, hidden = c(6,4,3), learningrate = 0.1)
+
+plot(bb)
+
+pred3 <- predict(bb,D3)
+
+table(D2$attention == 1, pred3[,1] > 0.5)
+
+# Error rate: 0.906, decrease
+# Steps: 228, decrease
+# accuracy: nn: (35+61)/(35+61+2+2)=0.96; aa: (34+62)/(34+62+3+1)=0.96; bb: (30+63)/(30+63+7+0)=0.93.So the accuracy decrease.
 ```
 
 ## Please answer the following questions:
 
 1. How accurate is your neural net? How can you tell?
+```{r}
+# accuracy: nn: (35+61)/(35+61+2+2)=0.96; aa: (34+62)/(34+62+3+1)=0.96; bb: (30+63)/(30+63+7+0)=0.93
+# The original neural net function is the same as my first neural net function, but my second neural net function is lower
+```
 
 2. How would you explain your model to the students whose behavior you are predicting? 
+```{r}
+# The inputs in the neural net are eyes, face.forward, chin-up, squint, hunch, mouth1, mouth2, mouth3, the output is attention-whether the student was paying attention when asked. With the change of the hidden layers, the error rate and accuracy also changed. 
+```
 
 3. This is a very simple example of a neural network. Real facial recognition is very complex though. Would a neural network be a good solution for predicting real facial movements? Why, why not? 
+```{r}
+# Yes. I think so.Human facial expressions and body movements are correlated. Even though there are some special cases, the overall prediction is reliable. According to some of the above neural network formulas, the accuracy is above ninety percent
+```
+
 
 ## Repeat with your own data
 
 Either synthesize a data set or find a data set online and build a neural net to predict a binary outcome from several inputs. Split your data into two sets and use one set to train the neural net and the other set to make predictions. Change the hidden layers and learning rate until you get the most accurate model you can.
+```{r}
+# Link: https://www.kaggle.com/fedesoriano/stroke-prediction-dataset
+
+D4 <- read.csv("C:/Users/19492/Desktop/Courses/HUDK 4051 Machine Learning/Neural Networks/healthcare-dataset-stroke-data.csv", header = TRUE)
+
+# Input: hypertension, heart disease,ever.married, residence Type
+# output: stroke
+
+D5 <- D4[,c(4,5,6,8,12)]
+summary(D5)
+
+D5$ever_married <- as.character(D5$ever_married)
+D5$ever_married[D5$ever_married == "Yes"] <- 1
+D5$ever_married[D5$ever_married == "No"] <- 0
+
+D5$Residence_type <- as.character(D5$Residence_type)
+D5$Residence_type[D5$Residence_type == "Urban"] <- 1
+D5$Residence_type[D5$Residence_type == "Rural"] <- 0
+
+D5$ever_married <- as.numeric(D5$ever_married)
+D5$Residence_type <- as.numeric(D5$Residence_type)
+
+# split into train and test
+test = D5[sample(nrow(D5),round(0.25*nrow(D5),0),replace=FALSE),]
+train = D5[-as.numeric(rownames(test)),]
+
+str(train)
+
+dd <- neuralnet(stroke == 1 ~ hypertension + heart_disease + ever_married + Residence_type, train, hidden = c(4,4), learningrate = 0.2)
+
+plot(dd)
+
+pred4 <- predict(dd,D5)
+
+table(D5$stroke == 1, pred4[,1] > 0.5)
+
+# the accuracy is (4859+3)/(4859+3+2+246)=0.95, 95%
+```
+
